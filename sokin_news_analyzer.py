@@ -605,7 +605,7 @@ class SokinNewsAnalyzer:
                             "body": [
                                 {
                                     "type": "TextBlock",
-                                    "text": f"📊 Daily Payments Briefing - {datetime.now().strftime('%B %d, %Y')}",
+                                    "text": f"🗞️ Daily Payments Briefing - {datetime.now().strftime('%B %d, %Y')}",
                                     "size": "Large",
                                     "weight": "Bolder"
                                 },
@@ -623,7 +623,7 @@ class SokinNewsAnalyzer:
         card_body = [
             {
                 "type": "TextBlock",
-                "text": f"📊 Daily Payments Briefing - {datetime.now().strftime('%B %d, %Y')}",
+                "text": f"🗞️ Daily Payments Briefing - {datetime.now().strftime('%B %d, %Y')}",
                 "size": "Large",
                 "weight": "Bolder"
             },
@@ -672,7 +672,7 @@ class SokinNewsAnalyzer:
                 card_body.append({
                     "type": "TextBlock",
                     "text": f"• {bullet}",
-                    "size": "Default",
+                    "size": "Medium",
                     "wrap": True
                 })
             
@@ -689,7 +689,7 @@ class SokinNewsAnalyzer:
                 card_body.append({
                     "type": "TextBlock",
                     "text": f"• {bullet}",
-                    "size": "Default",
+                    "size": "Medium",
                     "wrap": True
                 })
             
