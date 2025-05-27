@@ -19,10 +19,39 @@ def send_hello_world_message():
         print("Error: TEAMS_WEBHOOK_URL environment variable not set")
         return False
     
-    # Use simple format that gave us success, but make it more visible
+    # Use Adaptive Card format which Teams now requires
     message = {
-        "text": "HELLO FROM GITHUB ACTIONS!\n\nIf you can see this message, the webhook is working perfectly!\n",
-        "attachments": []
+        "type": "message",
+        "attachments": [
+            {
+                "contentType": "application/vnd.microsoft.card.adaptive",
+                "content": {
+                    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                    "type": "AdaptiveCard",
+                    "version": "1.2",
+                    "body": [
+                        {
+                            "type": "TextBlock",
+                            "text": "🚀 Hello from GitHub Actions!",
+                            "size": "Large",
+                            "weight": "Bolder",
+                            "color": "Accent"
+                        },
+                        {
+                            "type": "TextBlock",
+                            "text": f"Test message sent at {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}",
+                            "wrap": True
+                        },
+                        {
+                            "type": "TextBlock",
+                            "text": "✅ Connection successful!",
+                            "color": "Good",
+                            "weight": "Bolder"
+                        }
+                    ]
+                }
+            }
+        ]
     }
     
     try:
