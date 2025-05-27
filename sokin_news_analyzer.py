@@ -1,11 +1,4 @@
-    def should_check_source_today(self, source_name: str, source_config: dict) -> bool:
-        """Determine if we should check a source today based on its frequency"""
-        if source_config['frequency'] == 'daily':
-            return True
-        elif source_config['frequency'] == 'weekly':
-            # Only check weekly sources on Monday (weekday 0)
-            return datetime.now().weekday() == 0
-        return True#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Sokin Payments News Analyzer
 Sophisticated analysis tool for payments industry news with Sokin business context
@@ -48,7 +41,7 @@ class SokinAnalysis:
 class SokinNewsAnalyzer:
     def __init__(self):
         self.claude_api_key = os.getenv('CLAUDE_API_KEY')
-        self.power_automate_url = os.getenv('TEAMS_WEBHOOK_URL')  # Your Power Automate trigger URL
+        self.power_automate_url = os.getenv('TEAMS_WEBHOOK_URL')
         
         # Target publications for payments news (with scheduling info)
         self.target_sources = {
@@ -90,7 +83,7 @@ class SokinNewsAnalyzer:
         
         # File to track processed articles (simple JSON storage)
         self.processed_articles_file = 'processed_articles.json'
-    
+
     def should_check_source_today(self, source_name: str, source_config: dict) -> bool:
         """Determine if we should check a source today based on its frequency"""
         if source_config['frequency'] == 'daily':
@@ -362,105 +355,96 @@ class SokinNewsAnalyzer:
             return None
     
     def create_teams_message(self, analyses: List[SokinAnalysis]) -> dict:
-        """Create rich Teams message with all analyses"""
+        """Create Teams message with proper Adaptive Card format"""
         if not analyses:
             return {
-                "text": "No new payments articles found today.",
-                "attachments": []
+                "type": "message",
+                "attachments": [
+                    {
+                        "contentType": "application/vnd.microsoft.card.adaptive",
+                        "content": {
+                            "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                            "type": "AdaptiveCard",
+                            "version": "1.2",
+                            "body": [
+                                {
+                                    "type": "TextBlock",
+                                    "text": f"📊 Daily Payments Analysis - {datetime.now().strftime('%B %d, %Y')}",
+                                    "size": "Large",
+                                    "weight": "Bolder"
+                                },
+                                {
+                                    "type": "TextBlock",
+                                    "text": "No new relevant payments articles found today."
+                                }
+                            ]
+                        }
+                    }
+                ]
             }
         
-        # Create adaptive card
+        # Build card body with analyses
         card_body = [
             {
                 "type": "TextBlock",
-                "text": f"📊 Daily Payments Industry Analysis - {datetime.now().strftime('%B %d, %Y')}",
+                "text": f"📊 Daily Payments Analysis - {datetime.now().strftime('%B %d, %Y')}",
                 "size": "Large",
-                "weight": "Bolder",
-                "color": "Accent"
+                "weight": "Bolder"
             },
             {
-                "type": "TextBlock", 
-                "text": f"Found {len(analyses)} new relevant articles",
-                "color": "Good"
+                "type": "TextBlock",
+                "text": f"Found {len(analyses)} relevant articles",
+                "wrap": True
             }
         ]
         
-        # Add each analysis (limit to top 3 for Teams readability)
+        # Add each analysis as simple text blocks
         for i, analysis in enumerate(analyses[:3], 1):
-            # Direction emoji
-            direction_emoji = "⬆️" if analysis.sentiment_direction == "up" else "⬇️" if analysis.sentiment_direction == "down" else "↔️"
+            direction = "⬆️" if analysis.sentiment_direction == "up" else "⬇️" if analysis.sentiment_direction == "down" else "↔️"
+            stars = "⭐" * analysis.business_impact_score
             
-            # Impact score stars
-            impact_stars = "⭐" * analysis.business_impact_score
-            
-            article_section = {
-                "type": "Container",
-                "style": "emphasis",
-                "items": [
-                    {
-                        "type": "TextBlock",
-                        "text": f"{i}. {analysis.title}",
-                        "size": "Medium",
-                        "weight": "Bolder",
-                        "wrap": True
-                    },
-                    {
-                        "type": "TextBlock",
-                        "text": f"**Source:** {analysis.source} | **Category:** {analysis.sentiment_category} {direction_emoji} | **Impact:** {impact_stars}",
-                        "size": "Small",
-                        "color": "Accent"
-                    },
-                    {
-                        "type": "TextBlock",
-                        "text": "**Summary:**",
-                        "weight": "Bolder",
-                        "size": "Small"
-                    }
-                ]
-            }
-            
-            # Add summary bullets
-            for bullet in analysis.summary_bullets:
-                article_section["items"].append({
-                    "type": "TextBlock",
-                    "text": f"• {bullet}",
-                    "size": "Small",
-                    "wrap": True
-                })
-            
-            # Add so what section
-            article_section["items"].append({
+            # Article title
+            card_body.append({
                 "type": "TextBlock",
-                "text": "**So What for Sokin:**",
+                "text": f"{i}. {analysis.title}",
+                "size": "Medium",
                 "weight": "Bolder",
+                "wrap": True
+            })
+            
+            # Source and metadata
+            card_body.append({
+                "type": "TextBlock",
+                "text": f"Source: {analysis.source} | {analysis.sentiment_category} {direction} | Impact: {stars}",
                 "size": "Small",
-                "spacing": "Medium"
+                "wrap": True
             })
             
-            for bullet in analysis.so_what_bullets:
-                article_section["items"].append({
+            # Summary
+            summary_text = "Summary: " + "; ".join(analysis.summary_bullets)
+            card_body.append({
+                "type": "TextBlock",
+                "text": summary_text,
+                "wrap": True
+            })
+            
+            # So what
+            so_what_text = "So What for Sokin: " + "; ".join(analysis.so_what_bullets)
+            card_body.append({
+                "type": "TextBlock",
+                "text": so_what_text,
+                "wrap": True
+            })
+            
+            # Separator
+            if i < min(len(analyses), 3):
+                card_body.append({
                     "type": "TextBlock",
-                    "text": f"• {bullet}",
-                    "size": "Small",
-                    "wrap": True,
-                    "color": "Good"
+                    "text": "---",
+                    "separator": True
                 })
-            
-            # Add read more button
-            article_section["items"].append({
-                "type": "ActionSet",
-                "actions": [
-                    {
-                        "type": "Action.OpenUrl",
-                        "title": "Read Full Article",
-                        "url": analysis.url
-                    }
-                ]
-            })
-            
-            card_body.append(article_section)
         
-        message = {
+        return {
             "type": "message",
             "attachments": [
                 {
@@ -474,8 +458,6 @@ class SokinNewsAnalyzer:
                 }
             ]
         }
-        
-        return message
     
     def send_to_teams(self, message: dict) -> bool:
         """Send analysis to Teams via Power Automate"""
