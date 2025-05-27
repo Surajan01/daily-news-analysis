@@ -22,163 +22,108 @@ def send_detailed_to_teams(self, message: dict) -> bool:
         if not analyses:
             return {
                 "type": "message",
-                "attachments": [
-                    {
-                        "contentType": "application/vnd.microsoft.card.adaptive",
-                        "content": {
-                            "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-                            "type": "AdaptiveCard",
-                            "version": "1.2",
-                            "body": [
-                                {
-                                    "type": "TextBlock",
-                                    "text": f"📈 Comprehensive Daily Analysis - {datetime.now().strftime('%B %d, %Y')}",
-                                    "size": "Large",
-                                    "weight": "Bolder"
-                                },
-                                {
-                                    "type": "TextBlock",
-                                    "text": "No new relevant payments articles found today."
-                                }
-                            ]
-                        }
-                    }
-                ]
-            }
-        
-        # Build comprehensive card body
-        card_body = [
-            {
-                "type": "TextBlock",
-                "text": f"📈 Comprehensive Daily Analysis - {datetime.now().strftime('%B %d, %Y')}",
-                "size": "Large",
-                "weight": "Bolder"
-            },
-            {
-                "type": "TextBlock",
-                "text": f"Complete analysis of all {len(analyses)} articles found today",
-                "wrap": True,
-                "color": "Accent"
-            }
-        ]
-        
-        # Group by impact score for better organization
-        high_impact = [a for a in analyses if a.business_impact_score >= 4]
-        medium_impact = [a for a in analyses if a.business_impact_score == 3]
-        low_impact = [a for a in analyses if a.business_impact_score <= 2]
-        
-        sections = [
-            ("🔥 High Impact (4-5 stars)", high_impact),
-            ("📊 Medium Impact (3 stars)", medium_impact),
-            ("📝 Low Impact (1-2 stars)", low_impact)
-        ]
-        
-        for section_title, section_articles in sections:
-            if not section_articles:
-                continue
-                
-            # Section header
-            card_body.append({
-                "type": "TextBlock",
-                "text": section_title,
-                "size": "Medium",
-                "weight": "Bolder",
-                "spacing": "Large"
-            })
-            
-            # Articles in this section
-            for i, analysis in enumerate(section_articles, 1):
-                direction = "⬆️" if analysis.sentiment_direction == "up" else "⬇️" if analysis.sentiment_direction == "down" else "↔️"
-                stars = "⭐" * analysis.business_impact_score
-                
-                # Article title
-                card_body.append({
-                    "type": "TextBlock",
-                    "text": f"**{analysis.title}**",
-                    "size": "Medium",
-                    "weight": "Bolder",
-                    "wrap": True,
-                    "spacing": "Medium"
-                })
-                
-                # Source and metadata
-                card_body.append({
-                    "type": "TextBlock",
-                    "text": f"**Source:** {analysis.source} | **Category:** {analysis.sentiment_category} {direction} | **Impact:** {stars}",
-                    "size": "Small",
-                    "wrap": True,
-                    "color": "Accent"
-                })
-                
-                # Summary
-                card_body.append({
-                    "type": "TextBlock",
-                    "text": "**Summary:**",
-                    "weight": "Bolder",
-                    "size": "Small",
-                    "spacing": "Small"
-                })
-                
-                for bullet in analysis.summary_bullets:
-                    card_body.append({
-                        "type": "TextBlock",
-                        "text": f"• {bullet}",
-                        "size": "Default",
-                        "wrap": True
-                    })
-                
-                # So what
-                card_body.append({
-                    "type": "TextBlock",
-                    "text": "**So What for Sokin:**",
-                    "weight": "Bolder",
-                    "size": "Small",
-                    "spacing": "Small"
-                })
-                
-                for bullet in analysis.so_what_bullets:
-                    card_body.append({
-                        "type": "TextBlock",
-                        "text": f"• {bullet}",
-                        "size": "Default",
-                        "wrap": True
-                    })
-                
-                # Article link
-                card_body.append({
-                    "type": "ActionSet",
-                    "actions": [
-                        {
-                            "type": "Action.OpenUrl",
-                            "title": "📖 Read Full Article",
-                            "url": analysis.url
-                        }
-                    ],
-                    "spacing": "Small"
-                })
-                
-                # Separator
-                if i < len(section_articles):
-                    card_body.append({
-                        "type": "TextBlock",
-                        "text": "---",
-                        "separator": True,
-                        "spacing": "Medium"
-                    })
-        
-        return {
-            "type": "message",
-            "attachments": [
-                {
+                "attachments": [{
                     "contentType": "application/vnd.microsoft.card.adaptive",
                     "content": {
                         "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
                         "type": "AdaptiveCard",
                         "version": "1.2",
-                        "body": card_body
+                        "body": [{
+                            "type": "TextBlock",
+                            "text": "📈 Comprehensive Daily Analysis - No articles found today",
+                            "size": "Large",
+                            "weight": "Bolder"
+                        }]
                     }
+                }]
+            }
+        
+        # Build comprehensive card body
+        card_body = [{
+            "type": "TextBlock",
+            "text": f"📈 Comprehensive Daily Analysis - {datetime.now().strftime('%B %d, %Y')}",
+            "size": "Large",
+            "weight": "Bolder"
+        }, {
+            "type": "TextBlock",
+            "text": f"Complete analysis of all {len(analyses)} articles found today",
+            "wrap": True,
+            "color": "Accent"
+        }]
+        
+        # Add all analyses
+        for i, analysis in enumerate(analyses, 1):
+            direction = "⬆️" if analysis.sentiment_direction == "up" else "⬇️" if analysis.sentiment_direction == "down" else "↔️"
+            stars = "⭐" * analysis.business_impact_score
+            
+            # Article title
+            card_body.append({
+                "type": "TextBlock",
+                "text": f"**{i}. {analysis.title}**",
+                "size": "Medium",
+                "weight": "Bolder",
+                "wrap": True,
+                "spacing": "Medium"
+            })
+            
+            # Source and metadata
+            card_body.append({
+                "type": "TextBlock",
+                "text": f"**Source:** {analysis.source} | **Category:** {analysis.sentiment_category} {direction} | **Impact:** {stars}",
+                "size": "Small",
+                "wrap": True,
+                "color": "Accent"
+            })
+            
+            # Summary
+            summary_text = "**Summary:** " + "; ".join(analysis.summary_bullets)
+            card_body.append({
+                "type": "TextBlock",
+                "text": summary_text,
+                "wrap": True,
+                "size": "Default"
+            })
+            
+            # So what
+            so_what_text = "**So What for Sokin:** " + "; ".join(analysis.so_what_bullets)
+            card_body.append({
+                "type": "TextBlock",
+                "text": so_what_text,
+                "wrap": True,
+                "size": "Default"
+            })
+            
+            # Article link
+            card_body.append({
+                "type": "ActionSet",
+                "actions": [{
+                    "type": "Action.OpenUrl",
+                    "title": "📖 Read Full Article",
+                    "url": analysis.url
+                }],
+                "spacing": "Small"
+            })
+            
+            # Separator
+            if i < len(analyses):
+                card_body.append({
+                    "type": "TextBlock",
+                    "text": "---",
+                    "separator": True,
+                    "spacing": "Medium"
+                })
+        
+        return {
+            "type": "message",
+            "attachments": [{
+                "contentType": "application/vnd.microsoft.card.adaptive",
+                "content": {
+                    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                    "type": "AdaptiveCard",
+                    "version": "1.2",
+                    "body": card_body
                 }
-            ]
+            }]
         }#!/usr/bin/env python3
 """
 Sokin Payments News Analyzer
