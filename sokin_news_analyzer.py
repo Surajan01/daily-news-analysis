@@ -170,36 +170,119 @@ class SokinNewsAnalyzer:
             
             soup = BeautifulSoup(response.content, 'html.parser')
             
-            # Site-specific selectors for better accuracy
+            # Site-specific selectors for better accuracy - updated for current site structures
             article_links = []
             
             if 'pymnts.com' in source_url.lower():
-                selectors = ['h2.entry-title a', '.post-title a', 'h3 a[href*="/news/"]']
+                # PYMNTS uses these structures
+                selectors = [
+                    'h2 a[href*="/news/"]',
+                    'h3 a[href*="/news/"]', 
+                    '.post-title a',
+                    '.entry-title a',
+                    'a[href*="/article/"]',
+                    'a[href*="pymnts.com"]',
+                    'h2 a',
+                    'h3 a'
+                ]
             elif 'finextra.com' in source_url.lower():
-                selectors = ['.newsheadline a', 'h2 a[href*="/news/"]', '.headline a']
+                # Finextra structures
+                selectors = [
+                    'a[href*="/newsarticle/"]',
+                    'a[href*="/news/"]',
+                    '.headline a',
+                    '.newsheadline a',
+                    'h2 a',
+                    'h3 a',
+                    '.title a'
+                ]
             elif 'paymentsjournal.com' in source_url.lower():
-                selectors = ['.entry-title a', 'h2 a', '.post-title a']
+                # Payments Journal structures
+                selectors = [
+                    '.entry-title a',
+                    '.post-title a',
+                    'h2 a',
+                    'h1 a',
+                    'article h2 a',
+                    'article h3 a'
+                ]
             elif 'fintechmagazine.com' in source_url.lower():
-                selectors = ['.article-title a', 'h2 a[href*="/articles/"]', '.headline a']
+                # Fintech Magazine structures
+                selectors = [
+                    'a[href*="/articles/"]',
+                    '.article-title a',
+                    '.headline a',
+                    'h2 a',
+                    'h3 a',
+                    '.title a'
+                ]
             elif 'fintechbrainfood.com' in source_url.lower():
-                selectors = ['.post-title a', 'h1 a', 'h2 a']
+                # Fintech Brain Food structures
+                selectors = [
+                    '.post-title a',
+                    'h1 a',
+                    'h2 a',
+                    '.entry-title a',
+                    'article a'
+                ]
             else:
-                # Generic fallback selectors
+                # Much broader generic selectors
                 selectors = [
                     'a[href*="article"]',
                     'a[href*="/news/"]',
                     'a[href*="/story/"]',
+                    'a[href*="/post/"]',
+                    'a[href*="/blog/"]',
                     '.article-title a',
+                    '.post-title a',
+                    '.entry-title a',
                     '.headline a',
+                    '.title a',
+                    'h1 a',
                     'h2 a',
-                    'h3 a'
+                    'h3 a',
+                    'article a',
+                    '.content a',
+                    'main a'
                 ]
             
-            for selector in selectors:
-                links = soup.select(selector)
-                article_links.extend(links)
-                if len(article_links) >= max_articles * 2:  # Get more to filter from
-                    break
+            print(f"🔍 Trying {len(selectors)} different selectors for {source_name}...")
+            
+            for i, selector in enumerate(selectors):
+                try:
+                    links = soup.select(selector)
+                    print(f"   Selector {i+1} ('{selector}'): found {len(links)} links")
+                    
+                    # Filter for likely article links
+                    filtered_links = []
+                    for link in links:
+                        href = link.get('href', '')
+                        text = link.get_text(strip=True)
+                        
+                        # Must have href and meaningful text
+                        if not href or not text or len(text) < 10:
+                            continue
+                            
+                        # Skip obvious non-articles
+                        skip_words = ['home', 'about', 'contact', 'privacy', 'terms', 'subscribe', 'login', 'register']
+                        if any(word in text.lower() for word in skip_words):
+                            continue
+                            
+                        # Skip navigation links
+                        if any(word in href.lower() for word in ['menu', 'nav', 'footer', 'header', 'sidebar']):
+                            continue
+                            
+                        filtered_links.append(link)
+                    
+                    print(f"   After filtering: {len(filtered_links)} potential articles")
+                    article_links.extend(filtered_links)
+                    
+                    if len(article_links) >= max_articles * 3:  # Get enough to work with
+                        break
+                        
+                except Exception as e:
+                    print(f"   Error with selector '{selector}': {e}")
+                    continue
             
             # Process found links with better error handling
             processed_count = 0
