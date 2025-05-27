@@ -1,0 +1,39 @@
+name: Daily Sokin Payments Analysis
+
+on:
+  schedule:
+    # Run weekdays only at 8:00 AM UTC (Monday-Friday)
+    - cron: '0 8 * * 1-5'
+  workflow_dispatch: # Manual trigger for testing
+
+jobs:
+  analyze-payments-news:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+    
+    - name: Run Sokin payments analysis
+      env:
+        CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+        TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+      run: |
+        python sokin_news_analyzer.py
+    
+    - name: Commit processed articles tracking
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add processed_articles.json || true
+        git commit -m "Update processed articles tracking" || true
+        git push || true
