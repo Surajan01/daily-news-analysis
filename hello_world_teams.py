@@ -19,12 +19,10 @@ def send_hello_world_message():
         print("Error: TEAMS_WEBHOOK_URL environment variable not set")
         return False
     
-    # Try MessageCard format which Teams often prefers for webhooks
+    # Use simple format that gave us success, but make it more visible
     message = {
-        "@type": "MessageCard",
-        "@context": "http://schema.org/extensions",
-        "text": "🚀 Hello from GitHub Actions! This is a test message.",
-        "themeColor": "0078D4"
+        "text": "**🚀 HELLO FROM GITHUB ACTIONS! 🚀**\n\nIf you can see this message, the webhook is working perfectly!\n\nTimestamp: " + datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC'),
+        "attachments": []
     }
     
     try:
