@@ -40,7 +40,7 @@ class SokinAnalysis:
 
 class SokinNewsAnalyzer:
     def __init__(self):
-        self.openai_api_key = os.getenv('OPENAI_API_KEY')
+        self.claude_api_key = os.getenv('CLAUDE_API_KEY')
         self.power_automate_url = os.getenv('TEAMS_WEBHOOK_URL')  # Your Power Automate trigger URL
         
         # Target publications for payments news
@@ -289,21 +289,21 @@ class SokinNewsAnalyzer:
             - Regulatory changes impacting global payments
             """
             
-            # Using OpenAI API (you'll need to implement this based on your preferred AI service)
+            # Using Claude API
             headers = {
-                'Authorization': f'Bearer {self.openai_api_key}',
-                'Content-Type': 'application/json'
+                'x-api-key': self.claude_api_key,
+                'Content-Type': 'application/json',
+                'anthropic-version': '2023-06-01'
             }
             
             data = {
-                'model': 'gpt-4',
-                'messages': [{'role': 'user', 'content': prompt}],
-                'temperature': 0.3,
-                'max_tokens': 1000
+                'model': 'claude-3-sonnet-20240229',
+                'max_tokens': 1000,
+                'messages': [{'role': 'user', 'content': prompt}]
             }
             
             response = requests.post(
-                'https://api.openai.com/v1/chat/completions',
+                'https://api.anthropic.com/v1/messages',
                 headers=headers,
                 json=data,
                 timeout=60
@@ -311,7 +311,7 @@ class SokinNewsAnalyzer:
             
             if response.status_code == 200:
                 ai_response = response.json()
-                analysis_text = ai_response['choices'][0]['message']['content']
+                analysis_text = ai_response['content'][0]['text']
                 
                 # Parse JSON response
                 analysis_data = json.loads(analysis_text)
