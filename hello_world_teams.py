@@ -56,8 +56,8 @@ def send_hello_world_message():
             timeout=30
         )
         
-        # Check if successful
-        if response.status_code == 200:
+        # Check if successful (Teams returns 202, not 200)
+        if response.status_code in [200, 202]:
             print("✅ Message sent successfully to Teams!")
             return True
         else:
