@@ -134,52 +134,95 @@ class SokinNewsAnalyzer:
         return hashlib.md5(content.encode()).hexdigest()
     
     def scrape_articles_from_source(self, source_name: str, source_url: str, max_articles: int = 3) -> List[NewsArticle]:
-        """Scrape recent articles from a news source"""
+        """Scrape recent articles from a news source with anti-blocking measures"""
         articles = []
         
         try:
+            # Rotate user agents to appear more human
+            user_agents = [
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/120.0.0.0',
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15'
+            ]
+            
+            import random
+            selected_user_agent = random.choice(user_agents)
+            
             headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                'User-Agent': selected_user_agent,
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Accept-Encoding': 'gzip, deflate',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'none',
+                'Cache-Control': 'max-age=0'
             }
+            
+            # Random delay before request
+            time.sleep(random.uniform(2, 5))
             
             response = requests.get(source_url, headers=headers, timeout=30)
             response.raise_for_status()
             
             soup = BeautifulSoup(response.content, 'html.parser')
             
-            # Generic article extraction (will need refinement per site)
+            # Site-specific selectors for better accuracy
             article_links = []
             
-            # Common selectors for article links
-            selectors = [
-                'a[href*="article"]',
-                'a[href*="/news/"]',
-                'a[href*="/story/"]',
-                '.article-title a',
-                '.headline a',
-                'h2 a',
-                'h3 a'
-            ]
+            if 'pymnts.com' in source_url.lower():
+                selectors = ['h2.entry-title a', '.post-title a', 'h3 a[href*="/news/"]']
+            elif 'finextra.com' in source_url.lower():
+                selectors = ['.newsheadline a', 'h2 a[href*="/news/"]', '.headline a']
+            elif 'paymentsjournal.com' in source_url.lower():
+                selectors = ['.entry-title a', 'h2 a', '.post-title a']
+            elif 'fintechmagazine.com' in source_url.lower():
+                selectors = ['.article-title a', 'h2 a[href*="/articles/"]', '.headline a']
+            elif 'fintechbrainfood.com' in source_url.lower():
+                selectors = ['.post-title a', 'h1 a', 'h2 a']
+            else:
+                # Generic fallback selectors
+                selectors = [
+                    'a[href*="article"]',
+                    'a[href*="/news/"]',
+                    'a[href*="/story/"]',
+                    '.article-title a',
+                    '.headline a',
+                    'h2 a',
+                    'h3 a'
+                ]
             
             for selector in selectors:
                 links = soup.select(selector)
                 article_links.extend(links)
-                if len(article_links) >= max_articles:
+                if len(article_links) >= max_articles * 2:  # Get more to filter from
                     break
             
-            # Process found links
-            for link in article_links[:max_articles]:
+            # Process found links with better error handling
+            processed_count = 0
+            for link in article_links:
+                if processed_count >= max_articles:
+                    break
+                    
                 try:
                     href = link.get('href')
                     title = link.get_text(strip=True)
                     
-                    if not href or not title:
+                    if not href or not title or len(title) < 10:
                         continue
                     
                     # Convert relative URLs to absolute
                     if href.startswith('/'):
                         href = source_url.rstrip('/') + href
                     elif not href.startswith('http'):
+                        continue
+                    
+                    # Skip if URL looks like pagination or non-article
+                    skip_patterns = ['page=', 'category=', 'tag=', 'author=', '#comment']
+                    if any(pattern in href for pattern in skip_patterns):
                         continue
                     
                     # Create article hash for duplicate detection
@@ -189,8 +232,11 @@ class SokinNewsAnalyzer:
                     if article_hash in self.load_processed_articles():
                         continue
                     
-                    # Scrape article content
-                    article_content = self.scrape_article_content(href)
+                    # Add delay between article scrapes
+                    time.sleep(random.uniform(3, 6))
+                    
+                    # Scrape article content with retries
+                    article_content = self.scrape_article_content_with_retry(href)
                     
                     if article_content and self.is_payments_related(title + " " + article_content):
                         article = NewsArticle(
@@ -202,9 +248,8 @@ class SokinNewsAnalyzer:
                             hash_id=article_hash
                         )
                         articles.append(article)
-                        
-                        # Small delay to be respectful
-                        time.sleep(1)
+                        processed_count += 1
+                        print(f"✅ Successfully scraped: {title[:50]}...")
                         
                 except Exception as e:
                     print(f"Error processing article link: {e}")
@@ -215,50 +260,96 @@ class SokinNewsAnalyzer:
         
         return articles
     
-    def scrape_article_content(self, url: str) -> str:
-        """Extract main content from article URL"""
-        try:
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
-            
-            response = requests.get(url, headers=headers, timeout=20)
-            response.raise_for_status()
-            
-            soup = BeautifulSoup(response.content, 'html.parser')
-            
-            # Remove unwanted elements
-            for element in soup(['script', 'style', 'nav', 'header', 'footer', 'aside']):
-                element.decompose()
-            
-            # Try to find main content
-            content_selectors = [
-                '.article-content',
-                '.post-content', 
-                '.entry-content',
-                'article',
-                '.content',
-                'main'
-            ]
-            
-            content = ""
-            for selector in content_selectors:
-                element = soup.select_one(selector)
-                if element:
-                    content = element.get_text(strip=True)
-                    break
-            
-            # Fallback to body text
-            if not content:
-                content = soup.get_text()
-            
-            # Clean and truncate content
-            content = re.sub(r'\s+', ' ', content).strip()
-            return content[:3000]  # Limit content length
-            
-        except Exception as e:
-            print(f"Error scraping article content from {url}: {e}")
-            return ""
+    def scrape_article_content_with_retry(self, url: str, max_retries: int = 3) -> str:
+        """Extract main content from article URL with retry logic"""
+        for attempt in range(max_retries):
+            try:
+                # Different user agents for retries
+                user_agents = [
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
+                    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                ]
+                
+                import random
+                headers = {
+                    'User-Agent': random.choice(user_agents),
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.5',
+                    'Accept-Encoding': 'gzip, deflate',
+                    'Connection': 'keep-alive',
+                    'Referer': 'https://www.google.com/',
+                    'Upgrade-Insecure-Requests': '1'
+                }
+                
+                # Progressive delay for retries
+                if attempt > 0:
+                    time.sleep(random.uniform(5, 10) * attempt)
+                
+                response = requests.get(url, headers=headers, timeout=30)
+                response.raise_for_status()
+                
+                soup = BeautifulSoup(response.content, 'html.parser')
+                
+                # Remove unwanted elements
+                for element in soup(['script', 'style', 'nav', 'header', 'footer', 'aside', 'iframe', 'noscript']):
+                    element.decompose()
+                
+                # Try multiple content selectors in order of preference
+                content_selectors = [
+                    '[data-module="ArticleBody"]',  # Common in news sites
+                    '.article-content',
+                    '.post-content', 
+                    '.entry-content',
+                    '.article-body',
+                    '.content-body',
+                    'article .content',
+                    'article',
+                    '.content',
+                    'main .text',
+                    'main'
+                ]
+                
+                content = ""
+                for selector in content_selectors:
+                    element = soup.select_one(selector)
+                    if element:
+                        content = element.get_text(strip=True)
+                        if len(content) > 200:  # Ensure we got substantial content
+                            break
+                
+                # Fallback to body text if nothing found
+                if not content or len(content) < 100:
+                    content = soup.get_text()
+                
+                # Clean and truncate content
+                content = re.sub(r'\s+', ' ', content).strip()
+                
+                # Remove common noise
+                noise_patterns = [
+                    r'Subscribe to.*?newsletter',
+                    r'Follow us on.*?social media',
+                    r'Share this article',
+                    r'Comments.*?below',
+                    r'Cookie policy',
+                    r'Privacy policy'
+                ]
+                
+                for pattern in noise_patterns:
+                    content = re.sub(pattern, '', content, flags=re.IGNORECASE)
+                
+                return content[:4000]  # Increased limit for better analysis
+                
+            except requests.exceptions.RequestException as e:
+                print(f"Attempt {attempt + 1} failed for {url}: {e}")
+                if attempt == max_retries - 1:
+                    print(f"All attempts failed for {url}")
+                    return ""
+            except Exception as e:
+                print(f"Error scraping article content from {url}: {e}")
+                return ""
+        
+        return ""
     
     def is_payments_related(self, text: str) -> bool:
         """Check if article is related to payments/fintech"""
