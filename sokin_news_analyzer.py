@@ -203,6 +203,8 @@ class SokinNewsAnalyzer:
             
             # Process found links with better error handling
             processed_count = 0
+            print(f"🔍 Processing {len(article_links)} potential article links...")
+            
             for link in article_links:
                 if processed_count >= max_articles:
                     break
@@ -214,6 +216,8 @@ class SokinNewsAnalyzer:
                     if not href or not title or len(title) < 10:
                         continue
                     
+                    print(f"📝 Found potential article: {title[:60]}...")
+                    
                     # Convert relative URLs to absolute
                     if href.startswith('/'):
                         href = source_url.rstrip('/') + href
@@ -223,6 +227,7 @@ class SokinNewsAnalyzer:
                     # Skip if URL looks like pagination or non-article
                     skip_patterns = ['page=', 'category=', 'tag=', 'author=', '#comment']
                     if any(pattern in href for pattern in skip_patterns):
+                        print(f"⏭️ Skipping non-article URL: {href}")
                         continue
                     
                     # Create article hash for duplicate detection
@@ -230,7 +235,10 @@ class SokinNewsAnalyzer:
                     
                     # Skip if already processed
                     if article_hash in self.load_processed_articles():
+                        print(f"⏭️ Skipping already processed: {title[:50]}...")
                         continue
+                    
+                    print(f"🔍 Scraping content for: {title[:50]}...")
                     
                     # Add delay between article scrapes
                     time.sleep(random.uniform(3, 6))
@@ -238,21 +246,28 @@ class SokinNewsAnalyzer:
                     # Scrape article content with retries
                     article_content = self.scrape_article_content_with_retry(href)
                     
-                    if article_content and self.is_payments_related(title + " " + article_content):
-                        article = NewsArticle(
-                            title=title,
-                            url=href,
-                            content=article_content,
-                            source=source_name,
-                            published_date=datetime.now().strftime('%Y-%m-%d'),
-                            hash_id=article_hash
-                        )
-                        articles.append(article)
-                        processed_count += 1
-                        print(f"✅ Successfully scraped: {title[:50]}...")
+                    if not article_content:
+                        print(f"❌ No content extracted for: {title[:50]}...")
+                        continue
+                    
+                    if not self.is_payments_related(title + " " + article_content):
+                        print(f"⏭️ Not payments-related: {title[:50]}...")
+                        continue
+                    
+                    article = NewsArticle(
+                        title=title,
+                        url=href,
+                        content=article_content,
+                        source=source_name,
+                        published_date=datetime.now().strftime('%Y-%m-%d'),
+                        hash_id=article_hash
+                    )
+                    articles.append(article)
+                    processed_count += 1
+                    print(f"✅ Successfully scraped: {title[:50]}...")
                         
                 except Exception as e:
-                    print(f"Error processing article link: {e}")
+                    print(f"❌ Error processing article link: {e}")
                     continue
             
         except Exception as e:
@@ -643,9 +658,11 @@ class SokinNewsAnalyzer:
                 continue
                 
             print(f"📰 Scraping {source_name}...")
+            print(f"📍 URL: {source_config['url']}")
             articles = self.scrape_articles_from_source(source_name, source_config['url'])
+            print(f"📊 Raw articles found: {len(articles)}")
             all_articles.extend(articles)
-            print(f"Found {len(articles)} new articles from {source_name}")
+            print(f"✅ Found {len(articles)} new articles from {source_name}")
         
         print(f"📊 Total new articles found: {len(all_articles)}")
         
