@@ -19,32 +19,9 @@ def send_hello_world_message():
         print("Error: TEAMS_WEBHOOK_URL environment variable not set")
         return False
     
-    # Create a simple message
+    # Create a simple message (using simpler format for compatibility)
     message = {
-        "@type": "MessageCard",
-        "@context": "https://schema.org/extensions",
-        "summary": "Hello World Test",
-        "themeColor": "0078D4",  # Microsoft blue
-        "title": "🚀 Hello World from GitHub Actions!",
-        "text": f"This is a test message sent at {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}",
-        "sections": [
-            {
-                "facts": [
-                    {
-                        "name": "Status:",
-                        "value": "✅ Connection successful"
-                    },
-                    {
-                        "name": "Sent from:",
-                        "value": "GitHub Actions workflow"
-                    },
-                    {
-                        "name": "Next step:",
-                        "value": "Add news analysis features"
-                    }
-                ]
-            }
-        ]
+        "text": f"🚀 **Hello World from GitHub Actions!**\n\nThis is a test message sent at {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}\n\n✅ Connection successful!"
     }
     
     try:
