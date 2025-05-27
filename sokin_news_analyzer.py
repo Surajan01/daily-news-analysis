@@ -1,130 +1,4 @@
-def send_detailed_to_teams(self, message: dict) -> bool:
-        """Send detailed analysis to comprehensive Teams channel"""
-        try:
-            response = requests.post(
-                self.detailed_webhook_url,
-                headers={'Content-Type': 'application/json'},
-                json=message,
-                timeout=30
-            )
-            
-            if response.status_code in [200, 202]:
-                print("✅ Detailed analysis sent to Teams successfully!")
-                return True
-            else:
-                print(f"❌ Failed to send detailed analysis to Teams. Status: {response.status_code}")
-                return False
-                
-        except Exception as e:
-            print(f"❌ Error sending detailed analysis to Teams: {e}")
-            return False    def create_detailed_teams_message(self, analyses: List[SokinAnalysis]) -> dict:
-        """Create comprehensive Teams message with ALL analyses"""
-        if not analyses:
-            return {
-                "type": "message",
-                "attachments": [{
-                    "contentType": "application/vnd.microsoft.card.adaptive",
-                    "content": {
-                        "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-                        "type": "AdaptiveCard",
-                        "version": "1.2",
-                        "body": [{
-                            "type": "TextBlock",
-                            "text": "📈 Comprehensive Daily Analysis - No articles found today",
-                            "size": "Large",
-                            "weight": "Bolder"
-                        }]
-                    }
-                }]
-            }
-        
-        # Build comprehensive card body
-        card_body = [{
-            "type": "TextBlock",
-            "text": f"📈 Comprehensive Daily Analysis - {datetime.now().strftime('%B %d, %Y')}",
-            "size": "Large",
-            "weight": "Bolder"
-        }, {
-            "type": "TextBlock",
-            "text": f"Complete analysis of all {len(analyses)} articles found today",
-            "wrap": True,
-            "color": "Accent"
-        }]
-        
-        # Add all analyses
-        for i, analysis in enumerate(analyses, 1):
-            direction = "⬆️" if analysis.sentiment_direction == "up" else "⬇️" if analysis.sentiment_direction == "down" else "↔️"
-            stars = "⭐" * analysis.business_impact_score
-            
-            # Article title
-            card_body.append({
-                "type": "TextBlock",
-                "text": f"**{i}. {analysis.title}**",
-                "size": "Medium",
-                "weight": "Bolder",
-                "wrap": True,
-                "spacing": "Medium"
-            })
-            
-            # Source and metadata
-            card_body.append({
-                "type": "TextBlock",
-                "text": f"**Source:** {analysis.source} | **Category:** {analysis.sentiment_category} {direction} | **Impact:** {stars}",
-                "size": "Small",
-                "wrap": True,
-                "color": "Accent"
-            })
-            
-            # Summary
-            summary_text = "**Summary:** " + "; ".join(analysis.summary_bullets)
-            card_body.append({
-                "type": "TextBlock",
-                "text": summary_text,
-                "wrap": True,
-                "size": "Default"
-            })
-            
-            # So what
-            so_what_text = "**So What for Sokin:** " + "; ".join(analysis.so_what_bullets)
-            card_body.append({
-                "type": "TextBlock",
-                "text": so_what_text,
-                "wrap": True,
-                "size": "Default"
-            })
-            
-            # Article link
-            card_body.append({
-                "type": "ActionSet",
-                "actions": [{
-                    "type": "Action.OpenUrl",
-                    "title": "📖 Read Full Article",
-                    "url": analysis.url
-                }],
-                "spacing": "Small"
-            })
-            
-            # Separator
-            if i < len(analyses):
-                card_body.append({
-                    "type": "TextBlock",
-                    "text": "---",
-                    "separator": True,
-                    "spacing": "Medium"
-                })
-        
-        return {
-            "type": "message",
-            "attachments": [{
-                "contentType": "application/vnd.microsoft.card.adaptive",
-                "content": {
-                    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-                    "type": "AdaptiveCard",
-                    "version": "1.2",
-                    "body": card_body
-                }
-            }]
-        }#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Sokin Payments News Analyzer
 Sophisticated analysis tool for payments industry news with Sokin business context
@@ -140,6 +14,7 @@ from typing import List, Dict, Any, Optional
 from bs4 import BeautifulSoup
 import re
 import time
+import random
 
 @dataclass
 class NewsArticle:
@@ -167,8 +42,8 @@ class SokinAnalysis:
 class SokinNewsAnalyzer:
     def __init__(self):
         self.claude_api_key = os.getenv('CLAUDE_API_KEY')
-        self.power_automate_url = os.getenv('TEAMS_WEBHOOK_URL')  # Main briefing channel
-        self.detailed_webhook_url = os.getenv('TEAMS_DETAILED_WEBHOOK_URL')  # Detailed analysis channel
+        self.power_automate_url = os.getenv('TEAMS_WEBHOOK_URL')
+        self.detailed_webhook_url = os.getenv('TEAMS_DETAILED_WEBHOOK_URL')
         
         # Claude model - easily updatable
         self.claude_model = os.getenv('CLAUDE_MODEL', 'claude-3-5-sonnet-20241022')
@@ -281,7 +156,6 @@ class SokinNewsAnalyzer:
                 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15'
             ]
             
-            import random
             selected_user_agent = random.choice(user_agents)
             
             headers = {
@@ -504,7 +378,6 @@ class SokinNewsAnalyzer:
                     'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
                 ]
                 
-                import random
                 headers = {
                     'User-Agent': random.choice(user_agents),
                     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -610,17 +483,6 @@ class SokinNewsAnalyzer:
             Source: {article.source}
             Content: {article.content}
             
-            Provide analysis in this JSON format:
-            {{
-                "summary_bullets": ["bullet 1", "bullet 2", "bullet 3"],
-                "so_what_bullets": ["why this matters to Sokin", "business implications", "strategic considerations"],
-                "sentiment_category": "one of: {', '.join(self.sentiment_categories)}",
-                "sentiment_direction": "up/down/neutral",
-                "business_impact_score": 1-5,
-                "key_topics": ["topic1", "topic2", "topic3"],
-                "full_analysis": "detailed paragraph on what this means for Sokin"
-            }}
-            
             IMPORTANT SENTIMENT DIRECTION GUIDELINES:
             - UP ⬆️: Trend is INCREASING (more competition, higher demand, growing adoption, rising costs, etc.)
             - DOWN ⬇️: Trend is DECREASING (less competition, declining demand, reduced adoption, falling costs, etc.)
@@ -659,6 +521,17 @@ class SokinNewsAnalyzer:
             - Opportunities/threats for multi-currency solutions
             - Market trends affecting international commerce
             - Regulatory changes impacting global payments
+            
+            Provide analysis in this JSON format:
+            {{
+                "summary_bullets": ["bullet 1", "bullet 2", "bullet 3"],
+                "so_what_bullets": ["why this matters to Sokin", "business implications", "strategic considerations"],
+                "sentiment_category": "one of: {', '.join(self.sentiment_categories)}",
+                "sentiment_direction": "up/down/neutral",
+                "business_impact_score": 1-5,
+                "key_topics": ["topic1", "topic2", "topic3"],
+                "full_analysis": "detailed paragraph on what this means for Sokin"
+            }}
             """
             
             # Using Claude API
@@ -705,6 +578,10 @@ class SokinNewsAnalyzer:
                 )
                 
                 return sokin_analysis
+            else:
+                print(f"AI API error - Status: {response.status_code}")
+                print(f"Response: {response.text[:500]}")
+                return None
                 
         except Exception as e:
             print(f"Error analyzing article with AI: {e}")
@@ -728,7 +605,7 @@ class SokinNewsAnalyzer:
                             "body": [
                                 {
                                     "type": "TextBlock",
-                                    "text": f"📊 Daily Payments Analysis - {datetime.now().strftime('%B %d, %Y')}",
+                                    "text": f"📊 Daily Payments Briefing - {datetime.now().strftime('%B %d, %Y')}",
                                     "size": "Large",
                                     "weight": "Bolder"
                                 },
@@ -926,15 +803,8 @@ class SokinNewsAnalyzer:
             # Check for detailed webhook configuration
             print(f"🔍 Checking for detailed webhook... Configured: {bool(self.detailed_webhook_url)}")
             
-            # Send detailed analysis to comprehensive channel (if configured)
-            if self.detailed_webhook_url:
-                print("📈 Sending detailed analysis to comprehensive channel...")
-                detailed_message = self.create_detailed_teams_message(all_analyses)
-                success_detailed = self.send_detailed_to_teams(detailed_message)
-                print(f"📈 Detailed analysis sent: {'✅' if success_detailed else '❌'}")
-            else:
-                print("📝 Detailed webhook not configured - skipping comprehensive analysis")
-                print("💡 To enable: Add TEAMS_DETAILED_WEBHOOK_URL to GitHub secrets")
+            # For now, skip detailed analysis to avoid syntax issues
+            print("📝 Detailed analysis temporarily disabled - focusing on main briefing")
                 
         else:
             print("📭 No articles to analyze - sending 'no news' message")
