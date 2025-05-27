@@ -1,0 +1,32 @@
+name: Hello World Teams Test
+
+on:
+  # Manual trigger for testing
+  workflow_dispatch:
+  
+  # Optional: Run once to test, then comment out
+  # schedule:
+  #   - cron: '*/5 * * * *'  # Every 5 minutes for testing (remove after testing!)
+
+jobs:
+  send-hello-world:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        pip install requests
+    
+    - name: Send Hello World message to Teams
+      env:
+        TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+      run: |
+        python hello_world_teams.py
