@@ -1,4 +1,4 @@
-def should_check_source_today(self, source_name: str, source_config: dict) -> bool:
+    def should_check_source_today(self, source_name: str, source_config: dict) -> bool:
         """Determine if we should check a source today based on its frequency"""
         if source_config['frequency'] == 'daily':
             return True
@@ -328,6 +328,11 @@ class SokinNewsAnalyzer:
             if response.status_code == 200:
                 ai_response = response.json()
                 analysis_text = ai_response['content'][0]['text']
+                print(f"AI analysis received for: {article.title[:50]}...")
+            else:
+                print(f"AI API error - Status: {response.status_code}")
+                print(f"Response: {response.text[:500]}")
+                return None
                 
                 # Parse JSON response
                 analysis_data = json.loads(analysis_text)
@@ -351,6 +356,9 @@ class SokinNewsAnalyzer:
                 
         except Exception as e:
             print(f"Error analyzing article with AI: {e}")
+            print(f"Response status: {response.status_code if 'response' in locals() else 'No response'}")
+            if 'response' in locals() and hasattr(response, 'text'):
+                print(f"Response content: {response.text[:500]}")
             return None
     
     def create_teams_message(self, analyses: List[SokinAnalysis]) -> dict:
