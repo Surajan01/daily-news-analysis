@@ -43,6 +43,9 @@ class SokinNewsAnalyzer:
         self.claude_api_key = os.getenv('CLAUDE_API_KEY')
         self.power_automate_url = os.getenv('TEAMS_WEBHOOK_URL')
         
+        # Claude model - easily updatable
+        self.claude_model = os.getenv('CLAUDE_MODEL', 'claude-3-5-sonnet-20241022')
+        
         # Target publications for payments news (with scheduling info)
         self.target_sources = {
             'PYMNTS': {'url': 'https://www.pymnts.com/', 'frequency': 'daily'},
@@ -306,7 +309,7 @@ class SokinNewsAnalyzer:
             }
             
             data = {
-                'model': 'claude-3-5-sonnet-20241022',
+                'model': self.claude_model,
                 'max_tokens': 1000,
                 'messages': [{'role': 'user', 'content': prompt}]
             }
@@ -322,10 +325,6 @@ class SokinNewsAnalyzer:
                 ai_response = response.json()
                 analysis_text = ai_response['content'][0]['text']
                 print(f"AI analysis received for: {article.title[:50]}...")
-            else:
-                print(f"AI API error - Status: {response.status_code}")
-                print(f"Response: {response.text[:500]}")
-                return None
                 
                 # Parse JSON response
                 analysis_data = json.loads(analysis_text)
