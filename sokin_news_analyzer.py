@@ -1,4 +1,4 @@
-    def should_check_source_today(self, source_name: str, source_config: dict) -> bool:
+def should_check_source_today(self, source_name: str, source_config: dict) -> bool:
         """Determine if we should check a source today based on its frequency"""
         if source_config['frequency'] == 'daily':
             return True
