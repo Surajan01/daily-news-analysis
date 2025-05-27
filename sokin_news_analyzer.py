@@ -73,15 +73,18 @@ class SokinNewsAnalyzer:
         - Inefficient global payment processes
         """
         
-        # Sentiment categories specific to Sokin's business
+        # Sentiment categories specific to Sokin's business - more diverse
         self.sentiment_categories = [
-            "Cross-Border Payment Trends",
-            "Currency & FX Market", 
-            "Multi-Currency Solutions",
-            "International Commerce",
-            "Payment Cost Pressures",
-            "Regulatory Changes",
-            "Fintech Competition"
+            "Cross-Border Payment Competition",
+            "Multi-Currency Solution Demand", 
+            "SME Payment Pain Points",
+            "Regulatory & Compliance Changes",
+            "Currency Market Volatility",
+            "Digital Payment Adoption",
+            "Banking Infrastructure Changes",
+            "Fintech Partnership Opportunities",
+            "International Trade Volumes",
+            "Payment Cost Pressures"
         ]
         
         # File to track processed articles (simple JSON storage)
@@ -294,6 +297,27 @@ class SokinNewsAnalyzer:
                 "full_analysis": "detailed paragraph on what this means for Sokin"
             }}
             
+            IMPORTANT SENTIMENT DIRECTION GUIDELINES:
+            - UP ⬆️: Trend is INCREASING (more competition, higher demand, growing adoption, rising costs, etc.)
+            - DOWN ⬇️: Trend is DECREASING (less competition, declining demand, reduced adoption, falling costs, etc.)
+            - NEUTRAL ↔️: Trend is stable, mixed, or unclear direction
+            
+            EXAMPLES:
+            - New cross-border payment competitor launches = UP ⬆️ (increased competition)
+            - Demand for multi-currency solutions grows = UP ⬆️ (increased demand)
+            - SME payment costs rising = UP ⬆️ (increased cost pressures)
+            - Regulatory barriers being removed = DOWN ⬇️ (decreased barriers)
+            - International trade volumes declining = DOWN ⬇️ (decreased trade)
+            - Currency volatility increasing = UP ⬆️ (increased volatility)
+            
+            The arrow shows TREND DIRECTION, not whether it's good/bad for Sokin.
+            
+            IMPORTANT SCORING GUIDELINES:
+            - Business Impact Score: 1=minimal relevance, 2=low relevance, 3=moderate relevance, 4=high relevance, 5=critical for Sokin
+            - Be critical and realistic with scoring - not everything should be 4-5 stars
+            - Consider: Does this directly impact Sokin's cross-border payment business model?
+            - Score 1-2 for general industry news, 3-4 for relevant trends, 5 for direct competitive threats/opportunities
+            
             Focus on:
             - How this impacts cross-border payments
             - Opportunities/threats for multi-currency solutions
@@ -402,45 +426,80 @@ class SokinNewsAnalyzer:
             direction = "⬆️" if analysis.sentiment_direction == "up" else "⬇️" if analysis.sentiment_direction == "down" else "↔️"
             stars = "⭐" * analysis.business_impact_score
             
-            # Article title
+            # Article title with proper spacing
             card_body.append({
                 "type": "TextBlock",
-                "text": f"{i}. {analysis.title}",
+                "text": f"**{i}. {analysis.title}**",
                 "size": "Medium",
                 "weight": "Bolder",
-                "wrap": True
+                "wrap": True,
+                "spacing": "Medium"
             })
             
             # Source and metadata
             card_body.append({
                 "type": "TextBlock",
-                "text": f"Source: {analysis.source} | {analysis.sentiment_category} {direction} | Impact: {stars}",
+                "text": f"**Source:** {analysis.source} | **Category:** {analysis.sentiment_category} {direction} | **Impact:** {stars}",
                 "size": "Small",
-                "wrap": True
+                "wrap": True,
+                "color": "Accent"
             })
             
-            # Summary
-            summary_text = "Summary: " + "; ".join(analysis.summary_bullets)
+            # Summary with bullet points
             card_body.append({
                 "type": "TextBlock",
-                "text": summary_text,
-                "wrap": True
+                "text": "**Summary:**",
+                "weight": "Bolder",
+                "size": "Small",
+                "spacing": "Small"
             })
             
-            # So what
-            so_what_text = "So What for Sokin: " + "; ".join(analysis.so_what_bullets)
+            for bullet in analysis.summary_bullets:
+                card_body.append({
+                    "type": "TextBlock",
+                    "text": f"• {bullet}",
+                    "size": "Small",
+                    "wrap": True
+                })
+            
+            # So what with bullet points
             card_body.append({
                 "type": "TextBlock",
-                "text": so_what_text,
-                "wrap": True
+                "text": "**So What for Sokin:**",
+                "weight": "Bolder",
+                "size": "Small",
+                "spacing": "Small"
             })
             
-            # Separator
+            for bullet in analysis.so_what_bullets:
+                card_body.append({
+                    "type": "TextBlock",
+                    "text": f"• {bullet}",
+                    "size": "Small",
+                    "wrap": True,
+                    "color": "Good"
+                })
+            
+            # Add article link button
+            card_body.append({
+                "type": "ActionSet",
+                "actions": [
+                    {
+                        "type": "Action.OpenUrl",
+                        "title": "📖 Read Full Article",
+                        "url": analysis.url
+                    }
+                ],
+                "spacing": "Small"
+            })
+            
+            # Separator between articles
             if i < min(len(analyses), 3):
                 card_body.append({
                     "type": "TextBlock",
                     "text": "---",
-                    "separator": True
+                    "separator": True,
+                    "spacing": "Medium"
                 })
         
         return {
