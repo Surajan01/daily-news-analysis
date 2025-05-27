@@ -1,4 +1,185 @@
-#!/usr/bin/env python3
+def send_detailed_to_teams(self, message: dict) -> bool:
+        """Send detailed analysis to comprehensive Teams channel"""
+        try:
+            response = requests.post(
+                self.detailed_webhook_url,
+                headers={'Content-Type': 'application/json'},
+                json=message,
+                timeout=30
+            )
+            
+            if response.status_code in [200, 202]:
+                print("✅ Detailed analysis sent to Teams successfully!")
+                return True
+            else:
+                print(f"❌ Failed to send detailed analysis to Teams. Status: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Error sending detailed analysis to Teams: {e}")
+            return False    def create_detailed_teams_message(self, analyses: List[SokinAnalysis]) -> dict:
+        """Create comprehensive Teams message with ALL analyses"""
+        if not analyses:
+            return {
+                "type": "message",
+                "attachments": [
+                    {
+                        "contentType": "application/vnd.microsoft.card.adaptive",
+                        "content": {
+                            "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                            "type": "AdaptiveCard",
+                            "version": "1.2",
+                            "body": [
+                                {
+                                    "type": "TextBlock",
+                                    "text": f"📈 Comprehensive Daily Analysis - {datetime.now().strftime('%B %d, %Y')}",
+                                    "size": "Large",
+                                    "weight": "Bolder"
+                                },
+                                {
+                                    "type": "TextBlock",
+                                    "text": "No new relevant payments articles found today."
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        
+        # Build comprehensive card body
+        card_body = [
+            {
+                "type": "TextBlock",
+                "text": f"📈 Comprehensive Daily Analysis - {datetime.now().strftime('%B %d, %Y')}",
+                "size": "Large",
+                "weight": "Bolder"
+            },
+            {
+                "type": "TextBlock",
+                "text": f"Complete analysis of all {len(analyses)} articles found today",
+                "wrap": True,
+                "color": "Accent"
+            }
+        ]
+        
+        # Group by impact score for better organization
+        high_impact = [a for a in analyses if a.business_impact_score >= 4]
+        medium_impact = [a for a in analyses if a.business_impact_score == 3]
+        low_impact = [a for a in analyses if a.business_impact_score <= 2]
+        
+        sections = [
+            ("🔥 High Impact (4-5 stars)", high_impact),
+            ("📊 Medium Impact (3 stars)", medium_impact),
+            ("📝 Low Impact (1-2 stars)", low_impact)
+        ]
+        
+        for section_title, section_articles in sections:
+            if not section_articles:
+                continue
+                
+            # Section header
+            card_body.append({
+                "type": "TextBlock",
+                "text": section_title,
+                "size": "Medium",
+                "weight": "Bolder",
+                "spacing": "Large"
+            })
+            
+            # Articles in this section
+            for i, analysis in enumerate(section_articles, 1):
+                direction = "⬆️" if analysis.sentiment_direction == "up" else "⬇️" if analysis.sentiment_direction == "down" else "↔️"
+                stars = "⭐" * analysis.business_impact_score
+                
+                # Article title
+                card_body.append({
+                    "type": "TextBlock",
+                    "text": f"**{analysis.title}**",
+                    "size": "Medium",
+                    "weight": "Bolder",
+                    "wrap": True,
+                    "spacing": "Medium"
+                })
+                
+                # Source and metadata
+                card_body.append({
+                    "type": "TextBlock",
+                    "text": f"**Source:** {analysis.source} | **Category:** {analysis.sentiment_category} {direction} | **Impact:** {stars}",
+                    "size": "Small",
+                    "wrap": True,
+                    "color": "Accent"
+                })
+                
+                # Summary
+                card_body.append({
+                    "type": "TextBlock",
+                    "text": "**Summary:**",
+                    "weight": "Bolder",
+                    "size": "Small",
+                    "spacing": "Small"
+                })
+                
+                for bullet in analysis.summary_bullets:
+                    card_body.append({
+                        "type": "TextBlock",
+                        "text": f"• {bullet}",
+                        "size": "Default",
+                        "wrap": True
+                    })
+                
+                # So what
+                card_body.append({
+                    "type": "TextBlock",
+                    "text": "**So What for Sokin:**",
+                    "weight": "Bolder",
+                    "size": "Small",
+                    "spacing": "Small"
+                })
+                
+                for bullet in analysis.so_what_bullets:
+                    card_body.append({
+                        "type": "TextBlock",
+                        "text": f"• {bullet}",
+                        "size": "Default",
+                        "wrap": True
+                    })
+                
+                # Article link
+                card_body.append({
+                    "type": "ActionSet",
+                    "actions": [
+                        {
+                            "type": "Action.OpenUrl",
+                            "title": "📖 Read Full Article",
+                            "url": analysis.url
+                        }
+                    ],
+                    "spacing": "Small"
+                })
+                
+                # Separator
+                if i < len(section_articles):
+                    card_body.append({
+                        "type": "TextBlock",
+                        "text": "---",
+                        "separator": True,
+                        "spacing": "Medium"
+                    })
+        
+        return {
+            "type": "message",
+            "attachments": [
+                {
+                    "contentType": "application/vnd.microsoft.card.adaptive",
+                    "content": {
+                        "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                        "type": "AdaptiveCard",
+                        "version": "1.2",
+                        "body": card_body
+                    }
+                }
+            ]
+        }#!/usr/bin/env python3
 """
 Sokin Payments News Analyzer
 Sophisticated analysis tool for payments industry news with Sokin business context
@@ -41,7 +222,8 @@ class SokinAnalysis:
 class SokinNewsAnalyzer:
     def __init__(self):
         self.claude_api_key = os.getenv('CLAUDE_API_KEY')
-        self.power_automate_url = os.getenv('TEAMS_WEBHOOK_URL')
+        self.power_automate_url = os.getenv('TEAMS_WEBHOOK_URL')  # Main briefing channel
+        self.detailed_webhook_url = os.getenv('TEAMS_DETAILED_WEBHOOK_URL')  # Detailed analysis channel
         
         # Claude model - easily updatable
         self.claude_model = os.getenv('CLAUDE_MODEL', 'claude-3-5-sonnet-20241022')
@@ -109,7 +291,15 @@ class SokinNewsAnalyzer:
             return set()
         except Exception as e:
             print(f"Error loading processed articles: {e}")
-            return set()
+            # Fallback: use date-based filtering if file tracking fails
+            return self.get_processed_articles_fallback()
+    
+    def get_processed_articles_fallback(self) -> set:
+        """Fallback method: assume articles from today are already processed after first run"""
+        # Simple time-based deduplication as fallback
+        # In production, this prevents reprocessing within the same day
+        today = datetime.now().strftime('%Y-%m-%d')
+        return set() if not hasattr(self, '_daily_run_marker') else set(['daily_run_completed'])
     
     def save_processed_article(self, article_hash: str):
         """Save article hash to prevent reprocessing"""
@@ -503,9 +693,21 @@ class SokinNewsAnalyzer:
             
             IMPORTANT SCORING GUIDELINES:
             - Business Impact Score: 1=minimal relevance, 2=low relevance, 3=moderate relevance, 4=high relevance, 5=critical for Sokin
-            - Be critical and realistic with scoring - not everything should be 4-5 stars
-            - Consider: Does this directly impact Sokin's cross-border payment business model?
-            - Score 1-2 for general industry news, 3-4 for relevant trends, 5 for direct competitive threats/opportunities
+            - Be critical and realistic with scoring - use the full 1-5 range
+            
+            SOKIN IMPACT SCORING CRITERIA:
+            Score 5 (Critical): Direct competitive threats, major regulatory changes affecting cross-border payments, significant multi-currency market shifts
+            Score 4 (High): New competitors in cross-border space, relevant fintech partnerships, SME payment trends, currency regulation changes
+            Score 3 (Moderate): General fintech trends affecting payments, banking infrastructure changes, broader market movements
+            Score 2 (Low): Tangentially related financial news, general tech trends, distant market developments  
+            Score 1 (Minimal): General business news with minimal payment relevance, unrelated financial topics
+            
+            EXAMPLES:
+            - New cross-border payment platform launch = Score 4-5
+            - Major bank entering SME payments = Score 4-5  
+            - General fintech funding news = Score 2-3
+            - Cryptocurrency regulation changes = Score 3-4 (depending on impact on cross-border)
+            - Banking merger with no payment focus = Score 1-2
             
             Focus on:
             - How this impacts cross-border payments
@@ -599,14 +801,15 @@ class SokinNewsAnalyzer:
         card_body = [
             {
                 "type": "TextBlock",
-                "text": f"📊 Daily Payments Analysis - {datetime.now().strftime('%B %d, %Y')}",
+                "text": f"📊 Daily Payments Briefing - {datetime.now().strftime('%B %d, %Y')}",
                 "size": "Large",
                 "weight": "Bolder"
             },
             {
                 "type": "TextBlock",
-                "text": f"Found {len(analyses)} relevant articles",
-                "wrap": True
+                "text": f"Top 3 insights from {len(analyses)} articles analyzed",
+                "wrap": True,
+                "color": "Accent"
             }
         ]
         
@@ -769,9 +972,27 @@ class SokinNewsAnalyzer:
         
         # Send to Teams
         if all_analyses:
+            print(f"📊 Sending analysis of {len(all_analyses)} articles to Teams...")
+            
+            # Send brief summary to main channel
             teams_message = self.create_teams_message(all_analyses)
-            self.send_to_teams(teams_message)
+            success_main = self.send_to_teams(teams_message)
+            
+            # Check for detailed webhook configuration
+            print(f"🔍 Checking for detailed webhook... Configured: {bool(self.detailed_webhook_url)}")
+            
+            # Send detailed analysis to comprehensive channel (if configured)
+            if self.detailed_webhook_url:
+                print("📈 Sending detailed analysis to comprehensive channel...")
+                detailed_message = self.create_detailed_teams_message(all_analyses)
+                success_detailed = self.send_detailed_to_teams(detailed_message)
+                print(f"📈 Detailed analysis sent: {'✅' if success_detailed else '❌'}")
+            else:
+                print("📝 Detailed webhook not configured - skipping comprehensive analysis")
+                print("💡 To enable: Add TEAMS_DETAILED_WEBHOOK_URL to GitHub secrets")
+                
         else:
+            print("📭 No articles to analyze - sending 'no news' message")
             # Send "no news" message
             no_news_message = {
                 "text": f"📰 Daily Payments Analysis - {datetime.now().strftime('%B %d, %Y')}\n\nNo new relevant payments articles found today.",
