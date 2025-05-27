@@ -1,4 +1,11 @@
-#!/usr/bin/env python3
+    def should_check_source_today(self, source_name: str, source_config: dict) -> bool:
+        """Determine if we should check a source today based on its frequency"""
+        if source_config['frequency'] == 'daily':
+            return True
+        elif source_config['frequency'] == 'weekly':
+            # Only check weekly sources on Monday (weekday 0)
+            return datetime.now().weekday() == 0
+        return True#!/usr/bin/env python3
 """
 Sokin Payments News Analyzer
 Sophisticated analysis tool for payments industry news with Sokin business context
@@ -43,13 +50,13 @@ class SokinNewsAnalyzer:
         self.claude_api_key = os.getenv('CLAUDE_API_KEY')
         self.power_automate_url = os.getenv('TEAMS_WEBHOOK_URL')  # Your Power Automate trigger URL
         
-        # Target publications for payments news
+        # Target publications for payments news (with scheduling info)
         self.target_sources = {
-            'PYMNTS': 'https://www.pymnts.com/',
-            'Finextra': 'https://www.finextra.com/',
-            'Payments Journal': 'https://www.paymentsjournal.com/',
-            'Fintech Brain Food': 'https://www.fintechbrainfood.com/',
-            'Fintech Magazine': 'https://fintechmagazine.com/articles'
+            'PYMNTS': {'url': 'https://www.pymnts.com/', 'frequency': 'daily'},
+            'Finextra': {'url': 'https://www.finextra.com/', 'frequency': 'daily'},
+            'Payments Journal': {'url': 'https://www.paymentsjournal.com/', 'frequency': 'daily'},
+            'Fintech Brain Food': {'url': 'https://www.fintechbrainfood.com/', 'frequency': 'weekly'},
+            'Fintech Magazine': {'url': 'https://fintechmagazine.com/articles', 'frequency': 'daily'}
         }
         
         # Sokin business context for AI analysis
@@ -118,7 +125,7 @@ class SokinNewsAnalyzer:
         content = f"{title}|{url}"
         return hashlib.md5(content.encode()).hexdigest()
     
-    def scrape_articles_from_source(self, source_name: str, source_url: str, max_articles: int = 10) -> List[NewsArticle]:
+    def scrape_articles_from_source(self, source_name: str, source_url: str, max_articles: int = 3) -> List[NewsArticle]:
         """Scrape recent articles from a news source"""
         articles = []
         
@@ -361,8 +368,8 @@ class SokinNewsAnalyzer:
             }
         ]
         
-        # Add each analysis
-        for i, analysis in enumerate(analyses[:5], 1):  # Limit to top 5
+        # Add each analysis (limit to top 3 for Teams readability)
+        for i, analysis in enumerate(analyses[:3], 1):
             # Direction emoji
             direction_emoji = "⬆️" if analysis.sentiment_direction == "up" else "⬇️" if analysis.sentiment_direction == "down" else "↔️"
             
@@ -482,9 +489,14 @@ class SokinNewsAnalyzer:
         all_analyses = []
         
         # Scrape articles from all sources
-        for source_name, source_url in self.target_sources.items():
+        for source_name, source_config in self.target_sources.items():
+            # Check if we should scrape this source today
+            if not self.should_check_source_today(source_name, source_config):
+                print(f"⏭️ Skipping {source_name} (weekly source, not Monday)")
+                continue
+                
             print(f"📰 Scraping {source_name}...")
-            articles = self.scrape_articles_from_source(source_name, source_url)
+            articles = self.scrape_articles_from_source(source_name, source_config['url'])
             all_articles.extend(articles)
             print(f"Found {len(articles)} new articles from {source_name}")
         
