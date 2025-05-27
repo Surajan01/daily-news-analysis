@@ -3,7 +3,7 @@ name: Daily Sokin Payments Analysis
 on:
   schedule:
     # Run weekdays only at 8:00 AM UTC (Monday-Friday)
-    - cron: '0 8 * * 1-5'
+    - cron: '0 7 * * 1-5'
   workflow_dispatch: # Manual trigger for testing
 
 jobs:
