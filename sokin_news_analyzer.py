@@ -458,11 +458,11 @@ class SokinNewsAnalyzer:
                 card_body.append({
                     "type": "TextBlock",
                     "text": f"• {bullet}",
-                    "size": "Small",
+                    "size": "Default",
                     "wrap": True
                 })
             
-            # So what with bullet points
+            # So what with bullet points  
             card_body.append({
                 "type": "TextBlock",
                 "text": "**So What for Sokin:**",
@@ -475,9 +475,8 @@ class SokinNewsAnalyzer:
                 card_body.append({
                     "type": "TextBlock",
                     "text": f"• {bullet}",
-                    "size": "Small",
-                    "wrap": True,
-                    "color": "Good"
+                    "size": "Default",
+                    "wrap": True
                 })
             
             # Add article link button
