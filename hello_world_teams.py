@@ -19,9 +19,10 @@ def send_hello_world_message():
         print("Error: TEAMS_WEBHOOK_URL environment variable not set")
         return False
     
-    # Create the most basic message possible
+    # Create message with proper Teams format including attachments array
     message = {
-        "text": "Hello from GitHub Actions!"
+        "text": "Hello from GitHub Actions!",
+        "attachments": []
     }
     
     try:
