@@ -90,6 +90,15 @@ class SokinNewsAnalyzer:
         
         # File to track processed articles (simple JSON storage)
         self.processed_articles_file = 'processed_articles.json'
+    
+    def should_check_source_today(self, source_name: str, source_config: dict) -> bool:
+        """Determine if we should check a source today based on its frequency"""
+        if source_config['frequency'] == 'daily':
+            return True
+        elif source_config['frequency'] == 'weekly':
+            # Only check weekly sources on Monday (weekday 0)
+            return datetime.now().weekday() == 0
+        return True
         
     def load_processed_articles(self) -> set:
         """Load list of already processed article hashes"""
