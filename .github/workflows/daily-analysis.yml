@@ -27,6 +27,7 @@ jobs:
       env:
         CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
         TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+        TEAMS_DETAILED_WEBHOOK_URL: ${{ secrets.TEAMS_DETAILED_WEBHOOK_URL }}
       run: |
         python sokin_news_analyzer.py
     
@@ -36,4 +37,9 @@ jobs:
         git config --local user.name "GitHub Action"
         git add processed_articles.json || true
         git commit -m "Update processed articles tracking" || true
-        git push || true
+    
+    - name: Push changes
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: main
