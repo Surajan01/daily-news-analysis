@@ -19,9 +19,9 @@ def send_hello_world_message():
         print("Error: TEAMS_WEBHOOK_URL environment variable not set")
         return False
     
-    # Create a simple message (using simpler format for compatibility)
+    # Create the most basic message possible
     message = {
-        "text": f"🚀 **Hello World from GitHub Actions!**\n\nThis is a test message sent at {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}\n\n✅ Connection successful!"
+        "text": "Hello from GitHub Actions!"
     }
     
     try:
