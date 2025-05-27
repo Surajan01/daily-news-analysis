@@ -21,7 +21,7 @@ def send_hello_world_message():
     
     # Use simple format that gave us success, but make it more visible
     message = {
-        "text": "**🚀 HELLO FROM GITHUB ACTIONS! 🚀**\n\nIf you can see this message, the webhook is working perfectly!\n\nTimestamp: " + datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC'),
+        "text": "HELLO FROM GITHUB ACTIONS!\n\nIf you can see this message, the webhook is working perfectly!\n",
         "attachments": []
     }
     
