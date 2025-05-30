@@ -1,2 +1,2 @@
 # daily-news-analysis
-A bot to post daily analysis and sentiment on the payments industry
+Daily AI-powered analysis of payments industry trends and market sentiment
