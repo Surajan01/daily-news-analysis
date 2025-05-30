@@ -38,6 +38,7 @@ class SokinAnalysis:
     business_impact_score: int  # 1-5 scale
     key_topics: List[str]
     full_analysis: str
+    team_tags: List[str]  # NEW: Team relevance tags
 
 class SokinNewsAnalyzer:
     def __init__(self):
@@ -530,8 +531,24 @@ class SokinNewsAnalyzer:
                 "sentiment_direction": "up/down/neutral",
                 "business_impact_score": 1-5,
                 "key_topics": ["topic1", "topic2", "topic3"],
-                "full_analysis": "detailed paragraph on what this means for Sokin"
+                "full_analysis": "detailed paragraph on what this means for Sokin",
+                "team_tags": ["#Tag1", "#Tag2", "#Tag3"]
             }}
+            
+            TEAM RELEVANCE TAGS (select 1-3 most relevant):
+            - #Product: New features, UX trends, customer pain points, product development insights
+            - #Compliance: Regulatory changes, KYC requirements, licensing, compliance costs
+            - #Legal: New laws, court decisions, regulatory enforcement, legal precedents
+            - #Operations: Infrastructure, processing systems, settlement, operational efficiency
+            - #DataPrivacy: GDPR, data handling, security breaches, privacy regulations
+            - #Marketing: Customer acquisition trends, market positioning, competitive messaging
+            - #Engineering: Technical infrastructure, APIs, security, scalability, integration
+            
+            TAG SELECTION CRITERIA:
+            - Choose 1-3 tags maximum that are most relevant to the article content
+            - Minimum 1 tag required - every article must be relevant to at least one team
+            - Consider which Sokin teams would need to know about this development
+            - Focus on actionable relevance, not just general interest
             """
             
             # Using Claude API
@@ -574,7 +591,8 @@ class SokinNewsAnalyzer:
                     sentiment_direction=analysis_data['sentiment_direction'],
                     business_impact_score=analysis_data['business_impact_score'],
                     key_topics=analysis_data['key_topics'],
-                    full_analysis=analysis_data['full_analysis']
+                    full_analysis=analysis_data['full_analysis'],
+                    team_tags=analysis_data['team_tags']
                 )
                 
                 return sokin_analysis
@@ -650,10 +668,11 @@ class SokinNewsAnalyzer:
                 "spacing": "Medium"
             })
             
-            # Source and metadata
+            # Source and metadata with tags
+            tags_text = " ".join(analysis.team_tags) if analysis.team_tags else ""
             card_body.append({
                 "type": "TextBlock",
-                "text": f"**Source:** {analysis.source} | **Category:** {analysis.sentiment_category} {direction} | **Impact:** {stars}",
+                "text": f"**Source:** {analysis.source} | **Category:** {analysis.sentiment_category} {direction} | **Impact:** {stars} | **Tags:** {tags_text}",
                 "size": "Small",
                 "wrap": True,
                 "color": "Accent"
