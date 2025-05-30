@@ -1,4 +1,45 @@
-#!/usr/bin/env python3
+def save_analysis_for_weekly_roundup(self, analyses: List[SokinAnalysis]):
+        """Save daily analysis data for weekly roundup"""
+        try:
+            # Load existing weekly data
+            weekly_data = []
+            if os.path.exists(self.weekly_data_file):
+                with open(self.weekly_data_file, 'r') as f:
+                    data = json.load(f)
+                    weekly_data = data.get('weekly_analyses', [])
+            
+            # Add today's analyses
+            for analysis in analyses:
+                analysis_dict = {
+                    'title': analysis.title,
+                    'url': analysis.url,
+                    'source': analysis.source,
+                    'published_date': analysis.published_date,
+                    'summary_bullets': analysis.summary_bullets,
+                    'so_what_bullets': analysis.so_what_bullets,
+                    'sentiment_category': analysis.sentiment_category,
+                    'sentiment_direction': analysis.sentiment_direction,
+                    'business_impact_score': analysis.business_impact_score,
+                    'key_topics': analysis.key_topics,
+                    'full_analysis': analysis.full_analysis,
+                    'analysis_date': datetime.now().strftime('%Y-%m-%d')
+                }
+                weekly_data.append(analysis_dict)
+            
+            # Save updated weekly data
+            updated_data = {
+                'weekly_analyses': weekly_data,
+                'last_updated': datetime.now().isoformat(),
+                'week_start': (datetime.now() - timedelta(days=datetime.now().weekday())).strftime('%Y-%m-%d')
+            }
+            
+            with open(self.weekly_data_file, 'w') as f:
+                json.dump(updated_data, f, indent=2)
+            
+            print(f"💾 Saved {len(analyses)} analyses for weekly roundup")
+                
+        except Exception as e:
+            print(f"Error saving weekly analysis data: {e}")#!/usr/bin/env python3
 """
 Sokin Payments News Analyzer
 Sophisticated analysis tool for payments industry news with Sokin business context
@@ -38,6 +79,7 @@ class SokinAnalysis:
     business_impact_score: int  # 1-5 scale
     key_topics: List[str]
     full_analysis: str
+    team_tags: List[str]  # NEW: Team relevance tags
 
 class SokinNewsAnalyzer:
     def __init__(self):
@@ -91,6 +133,7 @@ class SokinNewsAnalyzer:
         
         # File to track processed articles (simple JSON storage)
         self.processed_articles_file = 'processed_articles.json'
+        self.weekly_data_file = 'weekly_analysis_data.json'
 
     def should_check_source_today(self, source_name: str, source_config: dict) -> bool:
         """Determine if we should check a source today based on its frequency"""
@@ -530,8 +573,24 @@ class SokinNewsAnalyzer:
                 "sentiment_direction": "up/down/neutral",
                 "business_impact_score": 1-5,
                 "key_topics": ["topic1", "topic2", "topic3"],
-                "full_analysis": "detailed paragraph on what this means for Sokin"
+                "full_analysis": "detailed paragraph on what this means for Sokin",
+                "team_tags": ["#Tag1", "#Tag2", "#Tag3"]
             }}
+            
+            TEAM RELEVANCE TAGS (select 1-3 most relevant):
+            - #Product: New features, UX trends, customer pain points, product development insights
+            - #Compliance: Regulatory changes, KYC requirements, licensing, compliance costs
+            - #Legal: New laws, court decisions, regulatory enforcement, legal precedents
+            - #Operations: Infrastructure, processing systems, settlement, operational efficiency
+            - #DataPrivacy: GDPR, data handling, security breaches, privacy regulations
+            - #Marketing: Customer acquisition trends, market positioning, competitive messaging
+            - #Engineering: Technical infrastructure, APIs, security, scalability, integration
+            
+            TAG SELECTION CRITERIA:
+            - Choose 1-3 tags maximum that are most relevant to the article content
+            - Minimum 1 tag required - every article must be relevant to at least one team
+            - Consider which Sokin teams would need to know about this development
+            - Focus on actionable relevance, not just general interest
             """
             
             # Using Claude API
@@ -574,7 +633,8 @@ class SokinNewsAnalyzer:
                     sentiment_direction=analysis_data['sentiment_direction'],
                     business_impact_score=analysis_data['business_impact_score'],
                     key_topics=analysis_data['key_topics'],
-                    full_analysis=analysis_data['full_analysis']
+                    full_analysis=analysis_data['full_analysis'],
+                    team_tags=analysis_data['team_tags']
                 )
                 
                 return sokin_analysis
@@ -650,10 +710,11 @@ class SokinNewsAnalyzer:
                 "spacing": "Medium"
             })
             
-            # Source and metadata
+            # Source and metadata with tags
+            tags_text = " ".join(analysis.team_tags) if analysis.team_tags else ""
             card_body.append({
                 "type": "TextBlock",
-                "text": f"**Source:** {analysis.source} | **Category:** {analysis.sentiment_category} {direction} | **Impact:** {stars}",
+                "text": f"**Source:** {analysis.source} | **Category:** {analysis.sentiment_category} {direction} | **Impact:** {stars} | **Tags:** {tags_text}",
                 "size": "Small",
                 "wrap": True,
                 "color": "Accent"
@@ -795,6 +856,9 @@ class SokinNewsAnalyzer:
         # Send to Teams
         if all_analyses:
             print(f"📊 Sending analysis of {len(all_analyses)} articles to Teams...")
+            
+            # Save analyses for weekly roundup
+            self.save_analysis_for_weekly_roundup(all_analyses)
             
             # Send brief summary to main channel
             teams_message = self.create_teams_message(all_analyses)
